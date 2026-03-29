@@ -5,9 +5,10 @@ import "github.com/pkg/errors"
 type Type string
 
 const (
-	TypeBash = Type("bash")
-	TypeSh   = Type("sh")
-	TypeSsh  = Type("ssh")
+	TypeBash   = Type("bash")
+	TypeSh     = Type("sh")
+	TypeSsh    = Type("ssh")
+	TypeDocker = Type("docker")
 )
 
 type IExecutor interface {
@@ -15,16 +16,26 @@ type IExecutor interface {
 	StartAndWait(args ...string) error
 }
 
-// New creates an executor for the given type. env is the set of environment
-// variables to export before running scripts. opts is only used when t == TypeSsh.
-func New(t Type, env map[string]string, scripts []string, opts *SshOptions) (IExecutor, error) {
+// Options holds optional configuration for executor types that need it.
+// Only the field matching the chosen Type is used.
+type Options struct {
+	SSH    *SshOptions
+	Docker *DockerOptions
+}
+
+// New creates an executor for the given type.
+// env is the set of environment variables to forward into the execution context.
+// opts carries type-specific configuration (SSH or Docker); unused fields are ignored.
+func New(t Type, env map[string]string, scripts []string, opts Options) (IExecutor, error) {
 	switch t {
 	case TypeBash:
 		return NewBashExecutor(env, scripts), nil
 	case TypeSh:
 		return NewShExecutor(env, scripts), nil
 	case TypeSsh:
-		return NewSshExecutor(env, scripts, opts), nil
+		return NewSshExecutor(env, scripts, opts.SSH), nil
+	case TypeDocker:
+		return NewDockerExecutor(env, scripts, opts.Docker), nil
 	default:
 		return nil, errors.Errorf("unknown executor type: %s", t)
 	}

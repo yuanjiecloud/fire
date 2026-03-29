@@ -12,19 +12,21 @@ import (
 type ExecutorType = executor.Type
 
 const (
-	ExecutorTypeBash = executor.TypeBash
-	ExecutorTypeSsh  = executor.TypeSsh
-	ExecutorTypeSh   = executor.TypeSh
+	ExecutorTypeBash   = executor.TypeBash
+	ExecutorTypeSsh    = executor.TypeSsh
+	ExecutorTypeSh     = executor.TypeSh
+	ExecutorTypeDocker = executor.TypeDocker
 )
 
 type Task struct {
-	Name         string               `json:"name,omitempty" yaml:"name,omitempty"`
-	Environments Environment          `json:"environments,omitempty" yaml:"environments,omitempty"`
-	Type         executor.Type        `json:"type,omitempty" yaml:"type,omitempty"`
-	Env          string               `json:"env,omitempty" yaml:"env,omitempty"`
-	Pipeline     string               `json:"pipeline,omitempty" yaml:"pipeline,omitempty"`
-	Scripts      []string             `json:"scripts,omitempty" yaml:"scripts,omitempty"`
-	SshOptions   *executor.SshOptions `json:"sshOptions,omitempty" yaml:"ssh-options,omitempty"`
+	Name          string                 `json:"name,omitempty" yaml:"name,omitempty"`
+	Environments  Environment            `json:"environments,omitempty" yaml:"environments,omitempty"`
+	Type          executor.Type          `json:"type,omitempty" yaml:"type,omitempty"`
+	Env           string                 `json:"env,omitempty" yaml:"env,omitempty"`
+	Pipeline      string                 `json:"pipeline,omitempty" yaml:"pipeline,omitempty"`
+	Scripts       []string               `json:"scripts,omitempty" yaml:"scripts,omitempty"`
+	SshOptions    *executor.SshOptions   `json:"sshOptions,omitempty" yaml:"ssh-options,omitempty"`
+	DockerOptions *executor.DockerOptions `json:"dockerOptions,omitempty" yaml:"docker-options,omitempty"`
 }
 
 func (t *Task) Exec(ctx *Context) error {
@@ -97,7 +99,10 @@ func (t *Task) runScripts(ctx *Context) error {
 	if !found {
 		return errors.Errorf("unset env")
 	}
-	ex, err := executor.New(t.Type, env, t.Scripts, t.SshOptions)
+	ex, err := executor.New(t.Type, env, t.Scripts, executor.Options{
+		SSH:    t.SshOptions,
+		Docker: t.DockerOptions,
+	})
 	if err != nil {
 		return err
 	}
