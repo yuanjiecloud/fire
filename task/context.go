@@ -6,12 +6,6 @@ type Context struct {
 	Parent      *Context
 	EnvProvider EnvProvider
 	Env         string
-	WorkDir     string
-}
-
-func WrapContext(parent *Context, child *Context) *Context {
-	child.Parent = parent
-	return child
 }
 
 func (t *Context) Clone() *Context {
@@ -22,7 +16,6 @@ func (t *Context) Clone() *Context {
 		Parent:      t.Parent,
 		EnvProvider: t.EnvProvider.Clone(),
 		Env:         t.Env,
-		WorkDir:     t.WorkDir,
 	}
 }
 

@@ -8,7 +8,8 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/pkg/errors"
+	"errors"
+
 	"github.com/yuanjiecloud/fire/datatype"
 	"github.com/yuanjiecloud/fire/log"
 	"gopkg.in/yaml.v3"
@@ -70,7 +71,7 @@ func (t *Pipeline) CreateContext(ctx *Context) *Context {
 	}
 	if ctx != nil && ctx.EnvProvider != nil {
 		result.Parent = ctx
-		result.EnvProvider = result.EnvProvider.MergeIgnoreDuplicated(ctx.EnvProvider)
+		result.EnvProvider = result.EnvProvider.MergeKeepExisting(ctx.EnvProvider)
 	}
 	return result
 }
@@ -136,7 +137,7 @@ func (t *Pipeline) RunTask(name string, ctx *Context) error {
 		pipeline, b := FindPipeline(name)
 		if !b {
 			log.Debug("pipeline not found: ", name)
-			return errors.Errorf("task not found: %s", name)
+			return fmt.Errorf("task not found: %s", name)
 		}
 		return pipeline.RunAll(t.CreateContext(ctx))
 	}

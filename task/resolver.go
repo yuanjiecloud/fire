@@ -7,7 +7,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/yuanjiecloud/fire/log"
 )
 
@@ -31,12 +30,12 @@ func (t *Resolver) checkout(repositoryUrl string, namespace, name, branch string
 	stat, err := os.Stat(repositoryPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return errors.Errorf("repository directory does not exist: %v", repositoryPath)
+			return fmt.Errorf("repository directory does not exist: %v", repositoryPath)
 		}
 		return fmt.Errorf("stat repository path %q: %w", repositoryPath, err)
 	}
 	if !stat.IsDir() {
-		return errors.Errorf("%s is not a directory", repositoryPath)
+		return fmt.Errorf("%s is not a directory", repositoryPath)
 	}
 	if branch == "" {
 		if strings.Contains(repositoryUrl, "github.com") {
@@ -88,7 +87,7 @@ func (t *Resolver) resolveDirectory(dir string) error {
 		log.Info("goback dir: ", wd)
 	}()
 	if !CheckIfExists(DefaultConfigFile) {
-		return errors.Errorf("%s is an invalid repository: %s not found", dir, DefaultConfigFile)
+		return fmt.Errorf("%s is an invalid repository: %s not found", dir, DefaultConfigFile)
 	}
 	pipeline, err := Parse(DefaultConfigFile)
 	if err != nil {
@@ -122,7 +121,7 @@ func (t *Resolver) Start() error {
 			namespace, name, _, err = SplitPackageName(replacement.Package)
 			if err != nil {
 				log.Error(err)
-				return errors.Errorf("resolve replacement failed: %v", depend)
+				return fmt.Errorf("resolve replacement failed: %v", depend)
 			}
 			version = replacement.Version.String()
 			if replacement.IsLocal() {
@@ -138,19 +137,19 @@ func (t *Resolver) Start() error {
 			err = t.checkout(replacement.Repository, namespace, name, version, reposDir)
 			if err != nil {
 				log.Error(err)
-				return errors.Errorf("checkout replacement failed: %v", depend)
+				return fmt.Errorf("checkout replacement failed: %v", depend)
 			}
 		} else {
 			namespace, name, version, err = SplitPackageName(depend)
 			if err != nil {
 				log.Error(err)
-				return errors.Errorf("resolve dependencies failed")
+				return fmt.Errorf("resolve dependencies failed")
 			}
 			repositoryUrl := fmt.Sprintf("https://github.com/%s/%s.git", namespace, name)
 			err = t.checkout(repositoryUrl, namespace, name, version, reposDir)
 			if err != nil {
 				log.Error(err)
-				return errors.Errorf("checkout package failed: %v", depend)
+				return fmt.Errorf("checkout package failed: %v", depend)
 			}
 		}
 	}

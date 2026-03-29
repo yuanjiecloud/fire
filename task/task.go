@@ -1,9 +1,9 @@
 package task
 
 import (
+	"fmt"
 	"os"
 
-	"github.com/pkg/errors"
 	"github.com/yuanjiecloud/fire/executor"
 	"github.com/yuanjiecloud/fire/log"
 )
@@ -52,11 +52,11 @@ func (t *Task) runPipeline(ctx *Context) error {
 	log.Debug("start pipeline: ", t.Pipeline)
 	pipeline, found := FindPipeline(t.Pipeline)
 	if !found {
-		return errors.Errorf("pipeline not found: %s", t.Pipeline)
+		return fmt.Errorf("pipeline not found: %s", t.Pipeline)
 	}
 	wd := Getwd()
 	if err := os.Chdir(pipeline.Getwd()); err != nil {
-		return errors.Errorf("enter pipeline directory %q: %v", pipeline.Getwd(), err)
+		return fmt.Errorf("enter pipeline directory %q: %v", pipeline.Getwd(), err)
 	}
 	defer func() {
 		if err := os.Chdir(wd); err != nil {
@@ -76,14 +76,14 @@ func (t *Task) getCurrentEnv(ctx *Context) (result Environment, found bool) {
 	if currentEnv != "" {
 		env, b := ctx.GetEnv(currentEnv)
 		if b {
-			result = result.MergeIgnoreDuplicated(env)
+			result = result.MergeKeepExisting(env)
 			found = true
 		}
 	}
 	if t.Env != "" {
 		env, b := ctx.GetEnv(t.Env)
 		if b {
-			result = result.MergeIgnoreDuplicated(env)
+			result = result.MergeKeepExisting(env)
 			found = true
 		}
 	}
@@ -96,7 +96,7 @@ func (t *Task) runScripts(ctx *Context) error {
 	}
 	env, found := t.getCurrentEnv(ctx)
 	if !found {
-		return errors.Errorf("unset env")
+		return fmt.Errorf("unset env")
 	}
 	ex, err := executor.New(t.Type, env, t.Scripts, executor.Options{
 		SSH:    t.SshOptions,

@@ -5,7 +5,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/pkg/errors"
+	"errors"
 )
 
 // BatchOptions configures the batch executor.
@@ -98,7 +98,7 @@ type batchExecutor struct {
 
 // NewBatchExecutor creates an executor that runs scripts once per item in
 // BatchOptions.Items, substituting the placeholder with the item value.
-func NewBatchExecutor(env map[string]string, scripts []string, options *BatchOptions) IExecutor {
+func NewBatchExecutor(env map[string]string, scripts []string, options *BatchOptions) Executor {
 	return &batchExecutor{
 		env:     env,
 		scripts: scripts,

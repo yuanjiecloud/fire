@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func NewShExecutor(env map[string]string, scripts []string) IExecutor {
+func NewShExecutor(env map[string]string, scripts []string) Executor {
 	in := bytes.NewBuffer(nil)
 	for k, v := range env {
 		in.WriteString(fmt.Sprintf("export %s=%s\n", k, shellQuote(v)))

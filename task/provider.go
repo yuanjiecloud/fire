@@ -1,11 +1,11 @@
 package task
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
 
-	"github.com/pkg/errors"
 	"github.com/yuanjiecloud/fire/log"
 )
 
@@ -19,11 +19,11 @@ func AddPipeline(pipelineWithVersion string, dir string) (*Pipeline, error) {
 	// Resolve to absolute path before any Chdir so configFile is always correct.
 	absDir, err := filepath.Abs(dir)
 	if err != nil {
-		return nil, errors.Errorf("cannot resolve path %q: %v", dir, err)
+		return nil, fmt.Errorf("cannot resolve path %q: %v", dir, err)
 	}
 	workdirBackup := Getwd()
 	if err = os.Chdir(absDir); err != nil {
-		return nil, errors.Errorf("cannot enter directory %q: %v", absDir, err)
+		return nil, fmt.Errorf("cannot enter directory %q: %v", absDir, err)
 	}
 	log.Debug("enter dir: ", absDir)
 	defer func() {
@@ -35,7 +35,7 @@ func AddPipeline(pipelineWithVersion string, dir string) (*Pipeline, error) {
 	configFile := filepath.Join(absDir, DefaultConfigFile)
 	pipeline, err := Parse(configFile)
 	if err != nil {
-		return nil, errors.Errorf("invalid fire project: %s", absDir)
+		return nil, fmt.Errorf("invalid fire project: %s", absDir)
 	}
 	log.Debug("add pipeline: ", pipelineWithVersion, " => ", absDir)
 	pipelineMu.Lock()

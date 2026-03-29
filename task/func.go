@@ -7,7 +7,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/yuanjiecloud/fire/log"
 )
 
@@ -88,14 +87,14 @@ func GetGlobalFireConfig() (configFile string, err error) {
 // names without a slash are rejected.
 func SplitPackageName(packageName string) (namespace, name, version string, err error) {
 	if packageName == "" {
-		err = errors.Errorf("invalid package: %q (expected namespace/name[@version])", packageName)
+		err = fmt.Errorf("invalid package: %q (expected namespace/name[@version])", packageName)
 		return
 	}
 	parts := strings.SplitN(packageName, "@", 2)
 	if len(parts) == 2 {
 		version = parts[1]
 		if version == "" {
-			err = errors.Errorf("invalid package: %q (version after '@' is empty)", packageName)
+			err = fmt.Errorf("invalid package: %q (version after '@' is empty)", packageName)
 			return
 		}
 	}
@@ -105,10 +104,10 @@ func SplitPackageName(packageName string) (namespace, name, version string, err 
 		namespace = segments[0]
 		name = segments[1]
 		if namespace == "" || name == "" {
-			err = errors.Errorf("invalid package: %q (namespace and name must not be empty)", packageName)
+			err = fmt.Errorf("invalid package: %q (namespace and name must not be empty)", packageName)
 		}
 	default:
-		err = errors.Errorf("invalid package: %q (expected namespace/name[@version])", packageName)
+		err = fmt.Errorf("invalid package: %q (expected namespace/name[@version])", packageName)
 	}
 	return
 }
@@ -178,7 +177,7 @@ func CheckIfGitRepository(dir string) bool {
 
 func GitFetchAndUpdate(dir string) error {
 	if !CheckIfGitRepository(dir) {
-		return errors.Errorf("invalid git repository: %v", dir)
+		return fmt.Errorf("invalid git repository: %v", dir)
 	}
 	wd := Getwd()
 	err := os.Chdir(dir)

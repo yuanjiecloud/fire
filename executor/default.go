@@ -1,6 +1,6 @@
 package executor
 
-import "github.com/pkg/errors"
+import "fmt"
 
 type Type string
 
@@ -12,7 +12,7 @@ const (
 	TypeBatch  = Type("batch")
 )
 
-type IExecutor interface {
+type Executor interface {
 	Start(args ...string) error
 	StartAndWait(args ...string) error
 }
@@ -28,7 +28,7 @@ type Options struct {
 // New creates an executor for the given type.
 // env is the set of environment variables to forward into the execution context.
 // opts carries type-specific configuration (SSH or Docker); unused fields are ignored.
-func New(t Type, env map[string]string, scripts []string, opts Options) (IExecutor, error) {
+func New(t Type, env map[string]string, scripts []string, opts Options) (Executor, error) {
 	switch t {
 	case TypeBash:
 		return NewBashExecutor(env, scripts), nil
@@ -41,6 +41,6 @@ func New(t Type, env map[string]string, scripts []string, opts Options) (IExecut
 	case TypeBatch:
 		return NewBatchExecutor(env, scripts, opts.Batch), nil
 	default:
-		return nil, errors.Errorf("unknown executor type: %s", t)
+		return nil, fmt.Errorf("unknown executor type: %s", t)
 	}
 }

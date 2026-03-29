@@ -2,13 +2,11 @@ package executor
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
-	"strings"
-
-	"github.com/pkg/errors"
 )
 
 type SshOptions struct {
@@ -28,19 +26,15 @@ type sshExecutor struct {
 	cmd *exec.Cmd
 }
 
-func sshShellQuote(s string) string {
-	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
-}
-
-func NewSshExecutor(env map[string]string, scripts []string, options *SshOptions) IExecutor {
+func NewSshExecutor(env map[string]string, scripts []string, options *SshOptions) Executor {
 	in := bytes.NewBuffer(nil)
 	if len(env) > 0 {
 		for k, v := range env {
-			in.WriteString(fmt.Sprintf("export %s=%s\n", k, sshShellQuote(v)))
+			in.WriteString(fmt.Sprintf("export %s=%s\n", k, shellQuote(v)))
 		}
 	}
 	if options != nil && options.RemotePath != "" {
-		in.WriteString(fmt.Sprintf("cd %s\n", sshShellQuote(options.RemotePath)))
+		in.WriteString(fmt.Sprintf("cd %s\n", shellQuote(options.RemotePath)))
 	}
 	for _, line := range scripts {
 		if len(line) == 0 {
@@ -59,10 +53,10 @@ func NewSshExecutor(env map[string]string, scripts []string, options *SshOptions
 
 func (t *sshExecutor) prepare(args ...string) error {
 	if t.options == nil {
-		return errors.Errorf("invalid ssh options")
+		return errors.New("invalid ssh options")
 	}
 	if t.options.Host == "" {
-		return errors.Errorf("host is empty")
+		return errors.New("host is empty")
 	}
 	host := t.options.Host
 	if t.options.User != "" {
@@ -100,9 +94,3 @@ func (t *sshExecutor) StartAndWait(args ...string) error {
 	return t.cmd.Run()
 }
 
-func (t *sshExecutor) Wait() error {
-	if t.cmd == nil {
-		return errors.New("no prepare")
-	}
-	return t.cmd.Wait()
-}

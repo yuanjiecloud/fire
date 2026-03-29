@@ -18,7 +18,7 @@ func (t Environment) OverridePatch(env Environment) (result Environment) {
 	return result
 }
 
-func (t Environment) MergeIgnoreDuplicated(env Environment) (result Environment) {
+func (t Environment) MergeKeepExisting(env Environment) (result Environment) {
 	result = t.Clone()
 	for k, v := range env {
 		if _, b := result[k]; !b {
@@ -54,7 +54,7 @@ func (t EnvProvider) OverridePatch(provider EnvProvider) EnvProvider {
 	return result
 }
 
-func (t EnvProvider) MergeIgnoreDuplicated(p EnvProvider) EnvProvider {
+func (t EnvProvider) MergeKeepExisting(p EnvProvider) EnvProvider {
 	result := t.Clone()
 	for k, v := range p {
 		if _, b := result[k]; !b {

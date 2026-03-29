@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/pkg/errors"
+	"errors"
 )
 
 // DockerOptions configures how scripts are executed inside Docker.
@@ -50,7 +50,7 @@ type dockerExecutor struct {
 
 // NewDockerExecutor creates an executor that runs scripts inside a Docker container.
 // Env vars are forwarded as -e flags; scripts are piped to the container shell via stdin.
-func NewDockerExecutor(env map[string]string, scripts []string, options *DockerOptions) IExecutor {
+func NewDockerExecutor(env map[string]string, scripts []string, options *DockerOptions) Executor {
 	in := bytes.NewBuffer(nil)
 	for _, line := range scripts {
 		if len(line) == 0 {
@@ -68,13 +68,13 @@ func NewDockerExecutor(env map[string]string, scripts []string, options *DockerO
 
 func (d *dockerExecutor) prepare(extraArgs ...string) error {
 	if d.options == nil {
-		return errors.Errorf("docker options are required")
+		return errors.New("docker options are required")
 	}
 	if d.options.Image == "" && d.options.Container == "" {
-		return errors.Errorf("docker executor requires either image or container to be set")
+		return errors.New("docker executor requires either image or container to be set")
 	}
 	if d.options.Image != "" && d.options.Container != "" {
-		return errors.Errorf("docker executor: image and container are mutually exclusive")
+		return errors.New("docker executor: image and container are mutually exclusive")
 	}
 
 	args := []string{"docker"}

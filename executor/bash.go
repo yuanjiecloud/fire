@@ -2,7 +2,6 @@ package executor
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -18,7 +17,7 @@ type bashExecutor struct {
 	cmd *exec.Cmd
 }
 
-func NewBashExecutor(env map[string]string, scripts []string) IExecutor {
+func NewBashExecutor(env map[string]string, scripts []string) Executor {
 	in := bytes.NewBuffer(nil)
 	if len(env) > 0 {
 		for k, v := range env {
@@ -61,13 +60,6 @@ func (t *bashExecutor) StartAndWait(args ...string) error {
 		return err
 	}
 	return t.cmd.Run()
-}
-
-func (t *bashExecutor) Wait() error {
-	if t.cmd == nil {
-		return errors.New("no prepare")
-	}
-	return t.cmd.Wait()
 }
 
 // shellQuote wraps a value in single quotes, escaping any single quotes within.
