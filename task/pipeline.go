@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"sort"
+	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/yuanjiecloud/fire/datatype"
@@ -21,6 +22,9 @@ type Pipeline struct {
 	Tasks        []Task        `json:"tasks,omitempty" yaml:"tasks,omitempty"`
 	Dependencies []string      `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 	Replace      []Replacement `json:"replace,omitempty" yaml:"replace,omitempty"`
+	// Parallel runs all tasks concurrently when true.
+	// Individual task errors are collected and returned together.
+	Parallel bool `json:"parallel,omitempty" yaml:"parallel,omitempty"`
 }
 
 func Parse(file string) (c *Pipeline, err error) {
@@ -68,19 +72,57 @@ func (t *Pipeline) CreateContext(ctx *Context) *Context {
 }
 
 func (t *Pipeline) RunAll(ctx *Context) error {
-	var err error
 	newContext := t.CreateContext(ctx)
+	if t.Parallel {
+		return t.runAllParallel(newContext)
+	}
+	return t.runAllSequential(newContext)
+}
+
+func (t *Pipeline) runAllSequential(ctx *Context) error {
 	for _, item := range t.Tasks {
 		showTitle(fmt.Sprintf("start task: %s", item.Name))
 		log.Debug("task env: ", item.Env)
-		log.Debug("context current env: ", ctx.GetCurrentEnv())
-		err = item.Exec(newContext.UseEnv(item.Env))
+		err := item.Exec(ctx.UseEnv(item.Env))
 		if err != nil {
 			return err
 		}
 		showTitle(fmt.Sprintf("end(%s)", item.Name))
 	}
 	return nil
+}
+
+// runAllParallel runs every task in its own goroutine and collects all errors.
+func (t *Pipeline) runAllParallel(ctx *Context) error {
+	var (
+		wg   sync.WaitGroup
+		mu   sync.Mutex
+		errs []string
+	)
+	for _, item := range t.Tasks {
+		item := item // capture
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			showTitle(fmt.Sprintf("start task (parallel): %s", item.Name))
+			if err := item.Exec(ctx.UseEnv(item.Env)); err != nil {
+				mu.Lock()
+				errs = append(errs, fmt.Sprintf("task %q: %v", item.Name, err))
+				mu.Unlock()
+			} else {
+				showTitle(fmt.Sprintf("end(%s)", item.Name))
+			}
+		}()
+	}
+	wg.Wait()
+	if len(errs) == 0 {
+		return nil
+	}
+	msg := fmt.Sprintf("%d task(s) failed:", len(errs))
+	for _, s := range errs {
+		msg += "\n  " + s
+	}
+	return errors.New(msg)
 }
 
 func (t *Pipeline) RunTask(name string, ctx *Context) error {

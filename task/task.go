@@ -16,17 +16,19 @@ const (
 	ExecutorTypeSsh    = executor.TypeSsh
 	ExecutorTypeSh     = executor.TypeSh
 	ExecutorTypeDocker = executor.TypeDocker
+	ExecutorTypeBatch  = executor.TypeBatch
 )
 
 type Task struct {
-	Name          string                 `json:"name,omitempty" yaml:"name,omitempty"`
-	Environments  Environment            `json:"environments,omitempty" yaml:"environments,omitempty"`
-	Type          executor.Type          `json:"type,omitempty" yaml:"type,omitempty"`
-	Env           string                 `json:"env,omitempty" yaml:"env,omitempty"`
-	Pipeline      string                 `json:"pipeline,omitempty" yaml:"pipeline,omitempty"`
-	Scripts       []string               `json:"scripts,omitempty" yaml:"scripts,omitempty"`
-	SshOptions    *executor.SshOptions   `json:"sshOptions,omitempty" yaml:"ssh-options,omitempty"`
+	Name          string                  `json:"name,omitempty" yaml:"name,omitempty"`
+	Environments  Environment             `json:"environments,omitempty" yaml:"environments,omitempty"`
+	Type          executor.Type           `json:"type,omitempty" yaml:"type,omitempty"`
+	Env           string                  `json:"env,omitempty" yaml:"env,omitempty"`
+	Pipeline      string                  `json:"pipeline,omitempty" yaml:"pipeline,omitempty"`
+	Scripts       []string                `json:"scripts,omitempty" yaml:"scripts,omitempty"`
+	SshOptions    *executor.SshOptions    `json:"sshOptions,omitempty" yaml:"ssh-options,omitempty"`
 	DockerOptions *executor.DockerOptions `json:"dockerOptions,omitempty" yaml:"docker-options,omitempty"`
+	BatchOptions  *executor.BatchOptions  `json:"batchOptions,omitempty" yaml:"batch-options,omitempty"`
 }
 
 func (t *Task) Exec(ctx *Context) error {
@@ -102,6 +104,7 @@ func (t *Task) runScripts(ctx *Context) error {
 	ex, err := executor.New(t.Type, env, t.Scripts, executor.Options{
 		SSH:    t.SshOptions,
 		Docker: t.DockerOptions,
+		Batch:  t.BatchOptions,
 	})
 	if err != nil {
 		return err

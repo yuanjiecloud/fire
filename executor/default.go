@@ -9,6 +9,7 @@ const (
 	TypeSh     = Type("sh")
 	TypeSsh    = Type("ssh")
 	TypeDocker = Type("docker")
+	TypeBatch  = Type("batch")
 )
 
 type IExecutor interface {
@@ -21,6 +22,7 @@ type IExecutor interface {
 type Options struct {
 	SSH    *SshOptions
 	Docker *DockerOptions
+	Batch  *BatchOptions
 }
 
 // New creates an executor for the given type.
@@ -36,6 +38,8 @@ func New(t Type, env map[string]string, scripts []string, opts Options) (IExecut
 		return NewSshExecutor(env, scripts, opts.SSH), nil
 	case TypeDocker:
 		return NewDockerExecutor(env, scripts, opts.Docker), nil
+	case TypeBatch:
+		return NewBatchExecutor(env, scripts, opts.Batch), nil
 	default:
 		return nil, errors.Errorf("unknown executor type: %s", t)
 	}
