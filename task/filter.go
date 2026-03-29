@@ -1,17 +1,28 @@
 package task
 
-type Filter map[string]bool
+import "sync"
+
+// Filter is a concurrency-safe set of strings used to deduplicate dependency
+// resolution across goroutines.
+type Filter struct {
+	mu   sync.RWMutex
+	seen map[string]bool
+}
 
 var globalResolverFilter = NewFilter()
 
-func NewFilter() Filter {
-	return make(Filter)
+func NewFilter() *Filter {
+	return &Filter{seen: make(map[string]bool)}
 }
 
-func (t Filter) Add(depend string) {
-	t[depend] = true
+func (f *Filter) Add(depend string) {
+	f.mu.Lock()
+	f.seen[depend] = true
+	f.mu.Unlock()
 }
 
-func (t Filter) Contains(depend string) bool {
-	return t[depend]
+func (f *Filter) Contains(depend string) bool {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	return f.seen[depend]
 }

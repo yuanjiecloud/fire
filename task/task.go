@@ -49,20 +49,17 @@ func (t *Task) runPipeline(ctx *Context) error {
 	if t.Pipeline == "" {
 		return nil
 	}
-	var err error
 	log.Debug("start pipeline: ", t.Pipeline)
 	pipeline, found := FindPipeline(t.Pipeline)
 	if !found {
 		return errors.Errorf("pipeline not found: %s", t.Pipeline)
 	}
 	wd := Getwd()
-	err = os.Chdir(pipeline.Getwd())
-	if err != nil {
-		log.Fatal(err)
+	if err := os.Chdir(pipeline.Getwd()); err != nil {
+		return errors.Errorf("enter pipeline directory %q: %v", pipeline.Getwd(), err)
 	}
 	defer func() {
-		err = os.Chdir(wd)
-		if err != nil {
+		if err := os.Chdir(wd); err != nil {
 			log.Fatal(err)
 		}
 	}()

@@ -29,8 +29,11 @@ func NewResolver(dependencies []string, replace []Replacement) *Resolver {
 
 func (t *Resolver) checkout(repositoryUrl string, namespace, name, branch string, repositoryPath string) error {
 	stat, err := os.Stat(repositoryPath)
-	if os.IsNotExist(err) {
-		return errors.Errorf("repository directory not exists: %v", repositoryPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return errors.Errorf("repository directory does not exist: %v", repositoryPath)
+		}
+		return fmt.Errorf("stat repository path %q: %w", repositoryPath, err)
 	}
 	if !stat.IsDir() {
 		return errors.Errorf("%s is not a directory", repositoryPath)
@@ -42,39 +45,36 @@ func (t *Resolver) checkout(repositoryUrl string, namespace, name, branch string
 			branch = "master"
 		}
 	}
+	cloneDir := path.Join(repositoryPath, namespace, name)
+	cloneDest := path.Join(cloneDir, branch)
+	if CheckIfExists(cloneDest) {
+		if CheckIfExists(path.Join(cloneDest, ".git")) {
+			log.Info("ignore: ", fmt.Sprintf("%s/%s@%s", namespace, name, branch))
+			return nil
+		}
+		// Destination exists but is not a git repo — remove it so we can clone cleanly.
+		if err = os.RemoveAll(cloneDest); err != nil {
+			return fmt.Errorf("remove stale clone destination %q: %w", cloneDest, err)
+		}
+	}
+	log.Debug(cloneDir, "=>", repositoryUrl, branch)
+	if err = os.MkdirAll(cloneDir, 0775); err != nil {
+		return fmt.Errorf("init cache dir %q: %w", cloneDir, err)
+	}
 	gitCommand := exec.Command("git", "clone", "-b", branch, repositoryUrl, branch)
 	gitCommand.Stderr = os.Stderr
 	gitCommand.Stdout = os.Stdout
-	gitCommand.Dir = path.Join(repositoryPath, namespace, name)
-	if CheckIfExists(path.Join(gitCommand.Dir, branch)) {
-		if CheckIfExists(path.Join(gitCommand.Dir, branch, ".git")) {
-			log.Info("ignore: ", fmt.Sprintf("%s/%s@%s", namespace, name, branch))
-			return nil
-		} else {
-			err = os.Remove(path.Join(gitCommand.Dir, branch))
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-	}
-	log.Debug(gitCommand.Dir, "=>", repositoryUrl, branch)
-	err = os.MkdirAll(gitCommand.Dir, 0775)
-	if err != nil {
-		log.Error(err)
-		return errors.Errorf("init cache dir failed: %v", gitCommand.Dir)
-	}
-	err = gitCommand.Run()
-	if err != nil {
+	gitCommand.Dir = cloneDir
+	if err = gitCommand.Run(); err != nil {
 		return err
 	}
-	return t.resolveDirectory(path.Join(repositoryPath, namespace, name, branch))
+	return t.resolveDirectory(cloneDest)
 }
 
 func (t *Resolver) resolveDirectory(dir string) error {
 	wd := Getwd()
-	err := os.Chdir(dir)
-	if err != nil {
-		log.Fatal(err)
+	if err := os.Chdir(dir); err != nil {
+		return fmt.Errorf("enter directory %q: %w", dir, err)
 	}
 	if path.IsAbs(dir) {
 		log.Info("enter dir: ", dir)
@@ -82,19 +82,17 @@ func (t *Resolver) resolveDirectory(dir string) error {
 		log.Info("enter dir: ", path.Join(wd, dir))
 	}
 	defer func() {
-		err = os.Chdir(wd)
-		if err != nil {
+		if err := os.Chdir(wd); err != nil {
 			log.Fatal(err)
 		}
 		log.Info("goback dir: ", wd)
 	}()
 	if !CheckIfExists(DefaultConfigFile) {
-		return errors.Errorf("%s is an invalid repository, %s not found", dir, DefaultConfigFile)
+		return errors.Errorf("%s is an invalid repository: %s not found", dir, DefaultConfigFile)
 	}
 	pipeline, err := Parse(DefaultConfigFile)
 	if err != nil {
-		log.Fatal("invalid repository, ", err)
-		return errors.Errorf("invalid repository")
+		return fmt.Errorf("invalid repository %q: %w", dir, err)
 	}
 	log.Debug("start resolving dependency pipeline: ", path.Join(dir, DefaultConfigFile))
 	return pipeline.Resolve()
@@ -103,7 +101,7 @@ func (t *Resolver) resolveDirectory(dir string) error {
 func (t *Resolver) Start() error {
 	reposDir, err := GetGlobalReposDir()
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("get global repos dir: %w", err)
 	}
 	log.Debug("dependencies count: ", len(t.dependencies))
 	for _, depend := range t.dependencies {
@@ -129,14 +127,13 @@ func (t *Resolver) Start() error {
 			version = replacement.Version.String()
 			if replacement.IsLocal() {
 				log.Debug("detected a local repos: ", depend)
-				if CheckIfExists(replacement.Repository) {
-					log.Info("ignore local repository: ", depend)
-					err = t.resolveDirectory(replacement.Repository)
-					if err != nil {
-						log.Fatal("resolve repository failed: ", err)
-					}
-					continue
+			if CheckIfExists(replacement.Repository) {
+				log.Info("ignore local repository: ", depend)
+				if err = t.resolveDirectory(replacement.Repository); err != nil {
+					return fmt.Errorf("resolve local repository %q: %w", replacement.Repository, err)
 				}
+				continue
+			}
 			}
 			err = t.checkout(replacement.Repository, namespace, name, version, reposDir)
 			if err != nil {

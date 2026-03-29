@@ -3,13 +3,17 @@ package task
 import (
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/yuanjiecloud/fire/log"
 )
 
-var mapFromPipelineToLocation = make(map[string]string)
-var pipelineMapper = make(map[string]*Pipeline)
+var (
+	pipelineMu               sync.RWMutex
+	mapFromPipelineToLocation = make(map[string]string)
+	pipelineMapper            = make(map[string]*Pipeline)
+)
 
 func AddPipeline(pipelineWithVersion string, dir string) (*Pipeline, error) {
 	// Resolve to absolute path before any Chdir so configFile is always correct.
@@ -34,22 +38,30 @@ func AddPipeline(pipelineWithVersion string, dir string) (*Pipeline, error) {
 		return nil, errors.Errorf("invalid fire project: %s", absDir)
 	}
 	log.Debug("add pipeline: ", pipelineWithVersion, " => ", absDir)
+	pipelineMu.Lock()
 	mapFromPipelineToLocation[pipelineWithVersion] = absDir
 	pipelineMapper[pipelineWithVersion] = pipeline
+	pipelineMu.Unlock()
 	return pipeline, nil
 }
 
 func FindPipeline(pipelineWithVersion string) (pipeline *Pipeline, found bool) {
+	pipelineMu.RLock()
 	pipeline, found = pipelineMapper[pipelineWithVersion]
+	pipelineMu.RUnlock()
 	return
 }
 
 func CheckIfContainPipeline(pipelineWithVersion string) bool {
+	pipelineMu.RLock()
 	_, found := pipelineMapper[pipelineWithVersion]
+	pipelineMu.RUnlock()
 	return found
 }
 
 func FindPipelineReposDir(pipelineWithVersion string) (dir string, found bool) {
+	pipelineMu.RLock()
 	dir, found = mapFromPipelineToLocation[pipelineWithVersion]
+	pipelineMu.RUnlock()
 	return
 }

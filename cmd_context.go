@@ -49,20 +49,17 @@ func (t *contextCommand) BeforeRun(cmd *cobra.Command) {
 	if task.CheckIfExists(configFile) {
 		// found fire.yaml in working dir
 		log.Debug(fmt.Sprintf("found %s in working directory: %s", task.DefaultConfigFile, t.workdir))
-		err = os.Chdir(t.workdir)
-		if err != nil {
+		if err = os.Chdir(t.workdir); err != nil {
 			log.Fatal(err)
-			return
 		}
 	} else {
 		// change to global config dir, and use default global config file
-		globalConfigDir, err := task.GetGlobalConfigDir()
-		if err != nil {
-			log.Fatal(err)
+		globalConfigDir, err2 := task.GetGlobalConfigDir()
+		if err2 != nil {
+			log.Fatal(err2)
 		}
-		err = os.Chdir(globalConfigDir)
-		if err != nil {
-			log.Fatal("use global config error:", err)
+		if err2 = os.Chdir(globalConfigDir); err2 != nil {
+			log.Fatal("use global config error:", err2)
 		}
 	}
 	t.pipeline, err = task.Parse(task.DefaultConfigFile)

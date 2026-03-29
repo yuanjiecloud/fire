@@ -180,7 +180,6 @@ func (t *Pipeline) GetAllowTaskList() (taskList datatype.SortableStringList) {
 }
 
 func (t *Pipeline) Preload() error {
-	var err error
 	enter(t.Getwd())
 	defer goback()
 	replaceMapper := make(map[string]Replacement)
@@ -188,51 +187,40 @@ func (t *Pipeline) Preload() error {
 		replaceMapper[replace.Package] = replace
 	}
 	for _, depend := range t.Dependencies {
-		replacement, found := replaceMapper[depend]
 		log.Debug("resolving dependency: ", depend)
-		var namespace, name, version string
-		namespace, name, version, err = SplitPackageName(depend)
+		replacement, found := replaceMapper[depend]
+		namespace, name, version, err := SplitPackageName(depend)
 		if err != nil {
-			log.Fatal("invalid repository:", depend)
+			return fmt.Errorf("invalid dependency %q: %w", depend, err)
 		}
 		if found {
 			if replacement.Repository == "" {
-				log.Fatal("repository in replacement is empty")
+				return fmt.Errorf("replacement for %q has empty repository", depend)
 			}
+			var repositoryDir string
 			if replacement.IsLocal() {
-				repositoryDir := path.Join(Getwd(), replacement.Repository)
-				pipeline, err := AddPipeline(depend, repositoryDir)
-				if err != nil {
-					log.Fatal(err)
-				}
-				err = pipeline.Preload()
-				if err != nil {
-					log.Fatal(err)
-				}
+				repositoryDir = path.Join(Getwd(), replacement.Repository)
 			} else {
-				repositoryDir := CreateRepositoryLocationSpecificVersion(namespace, name, replacement.Version.String())
-				pipeline, err := AddPipeline(depend, repositoryDir)
-				if err != nil {
-					log.Fatal(err)
-				}
-				err = pipeline.Preload()
-				if err != nil {
-					log.Fatal(err)
-				}
+				repositoryDir = CreateRepositoryLocationSpecificVersion(namespace, name, replacement.Version.String())
+			}
+			pipeline, err := AddPipeline(depend, repositoryDir)
+			if err != nil {
+				return fmt.Errorf("add pipeline %q: %w", depend, err)
+			}
+			if err = pipeline.Preload(); err != nil {
+				return err
 			}
 		} else {
 			log.Debug("no replacement dependency: ", name)
 			repositoryDir := CreateRepositoryLocationSpecificVersion(namespace, name, version)
 			pipeline, err := AddPipeline(depend, repositoryDir)
 			if err != nil {
-				log.Fatal(err)
+				return fmt.Errorf("add pipeline %q: %w", depend, err)
 			}
-			err = pipeline.Preload()
-			if err != nil {
-				log.Fatal(err)
+			if err = pipeline.Preload(); err != nil {
+				return err
 			}
 		}
-
 	}
 	return nil
 }
@@ -263,7 +251,7 @@ func (t *Pipeline) CleanDependencies() error {
 	return nil
 }
 
-func (t *Pipeline) UpdateDependencies() {
+func (t *Pipeline) UpdateDependencies() error {
 	for _, depend := range t.Dependencies {
 		reposDir, found := FindPipelineReposDir(depend)
 		if !found {
@@ -273,13 +261,17 @@ func (t *Pipeline) UpdateDependencies() {
 		if !found {
 			continue
 		}
-		pipeline.UpdateDependencies()
+		if err := pipeline.UpdateDependencies(); err != nil {
+			return err
+		}
 		if CheckIfGitRepository(reposDir) {
 			log.Info("update: ", reposDir)
-			err := GitFetchAndUpdate(reposDir)
-			log.CheckAndFatal(err)
+			if err := GitFetchAndUpdate(reposDir); err != nil {
+				return fmt.Errorf("git update %q: %w", reposDir, err)
+			}
 		} else {
 			log.Info("ignore local repository dir: ", reposDir)
 		}
 	}
+	return nil
 }
