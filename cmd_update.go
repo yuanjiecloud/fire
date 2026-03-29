@@ -23,8 +23,7 @@ func (t *updateCommand) BeforeRun(cmd *cobra.Command) {
 }
 
 func (t *updateCommand) Run(cmd *cobra.Command, args []string) {
-	log.Info("recommend use clean and install")
-	// t.pipeline.UpdateDependencies()
+	t.pipeline.UpdateDependencies()
 }
 
 func init() {

@@ -8,10 +8,8 @@ import (
 
 func NewShExecutor(env map[string]string, scripts []string) IExecutor {
 	in := bytes.NewBuffer(nil)
-	if len(env) > 0 {
-		for k, v := range env {
-			in.WriteString(fmt.Sprintf("export %v=%v\n", k, v))
-		}
+	for k, v := range env {
+		in.WriteString(fmt.Sprintf("export %s=%s\n", k, shellQuote(v)))
 	}
 	for _, line := range scripts {
 		if len(line) == 0 {
@@ -19,10 +17,9 @@ func NewShExecutor(env map[string]string, scripts []string) IExecutor {
 		}
 		in.WriteString(line + "\n")
 	}
-	result := &bashExecutor{
+	return &bashExecutor{
 		Binary: "/bin/sh",
 		in:     in,
 		out:    os.Stdout,
 	}
-	return result
 }

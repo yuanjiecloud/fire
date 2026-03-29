@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"sort"
 
 	"github.com/pkg/errors"
 	"github.com/yuanjiecloud/fire/datatype"
@@ -128,6 +129,7 @@ func (t *Pipeline) GetAllowTaskList() (taskList datatype.SortableStringList) {
 			}
 		}
 	}
+	sort.Sort(taskList)
 	return
 }
 

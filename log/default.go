@@ -2,7 +2,6 @@ package log
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"runtime/debug"
 )
@@ -29,12 +28,13 @@ func Fatal(data ...interface{}) {
 func Error(data ...interface{}) {
 	os.Stderr.WriteString(fmt.Sprint(data...) + "\n")
 }
+
 func Info(data ...interface{}) {
 	fmt.Println(data...)
 }
 
 func CheckAndFatal(err error) {
 	if err != nil {
-		log.Fatal(err)
+		Fatal(err)
 	}
 }

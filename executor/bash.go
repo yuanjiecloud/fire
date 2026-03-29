@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 type bashExecutor struct {
@@ -21,7 +22,7 @@ func NewBashExecutor(env map[string]string, scripts []string) IExecutor {
 	in := bytes.NewBuffer(nil)
 	if len(env) > 0 {
 		for k, v := range env {
-			in.WriteString(fmt.Sprintf("export %v=%v\n", k, v))
+			in.WriteString(fmt.Sprintf("export %s=%s\n", k, shellQuote(v)))
 		}
 	}
 	for _, line := range scripts {
@@ -67,4 +68,9 @@ func (t *bashExecutor) Wait() error {
 		return errors.New("no prepare")
 	}
 	return t.cmd.Wait()
+}
+
+// shellQuote wraps a value in single quotes, escaping any single quotes within.
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
 }

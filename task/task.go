@@ -8,21 +8,25 @@ import (
 	"github.com/yuanjiecloud/fire/log"
 )
 
-type ExecutorType string
+// ExecutorType aliases executor.Type for use in fire.yaml task definitions.
+type ExecutorType = executor.Type
 
 const (
-	ExecutorTypeBash = ExecutorType("bash")
-	ExecutorTypeSsh  = ExecutorType("ssh")
+	ExecutorTypeBash   = executor.TypeBash
+	ExecutorTypeSsh    = executor.TypeSsh
+	ExecutorTypeSh     = executor.TypeSh
+	ExecutorTypeDocker = executor.TypeDocker
 )
 
 type Task struct {
-	Name         string               `json:"name,omitempty" yaml:"name,omitempty"`
-	Environments Environment          `json:"environments,omitempty" yaml:"environments,omitempty"`
-	Type         executor.Type        `json:"type,omitempty" yaml:"type,omitempty"`
-	Env          string               `json:"env,omitempty" yaml:"env,omitempty"`
-	Pipeline     string               `json:"pipeline,omitempty" yaml:"pipeline,omitempty"`
-	Scripts      []string             `json:"scripts,omitempty" yaml:"scripts,omitempty"`
-	SshOptions   *executor.SshOptions `json:"sshOptions,omitempty" yaml:"ssh-options,omitempty"`
+	Name          string                 `json:"name,omitempty" yaml:"name,omitempty"`
+	Environments  Environment            `json:"environments,omitempty" yaml:"environments,omitempty"`
+	Type          executor.Type          `json:"type,omitempty" yaml:"type,omitempty"`
+	Env           string                 `json:"env,omitempty" yaml:"env,omitempty"`
+	Pipeline      string                 `json:"pipeline,omitempty" yaml:"pipeline,omitempty"`
+	Scripts       []string               `json:"scripts,omitempty" yaml:"scripts,omitempty"`
+	SshOptions    *executor.SshOptions   `json:"sshOptions,omitempty" yaml:"ssh-options,omitempty"`
+	DockerOptions *executor.DockerOptions `json:"dockerOptions,omitempty" yaml:"docker-options,omitempty"`
 }
 
 func (t *Task) Exec(ctx *Context) error {
@@ -87,7 +91,7 @@ func (t *Task) getCurrentEnv(ctx *Context) (result Environment, found bool) {
 	return
 }
 
-func (t *Task) runScripts(ctx *Context) (err error) {
+func (t *Task) runScripts(ctx *Context) error {
 	if len(t.Scripts) == 0 {
 		return nil
 	}
@@ -95,11 +99,12 @@ func (t *Task) runScripts(ctx *Context) (err error) {
 	if !found {
 		return errors.Errorf("unset env")
 	}
-	if t.Type == executor.TypeBash {
-		return executor.NewBashExecutor(env, t.Scripts).StartAndWait()
-	} else if t.Type == executor.TypeSsh {
-		return executor.NewSshExecutor(env, t.Scripts, t.SshOptions).StartAndWait()
-	} else {
-		return errors.Errorf("unknown executor type: %v", t.Type)
+	ex, err := executor.New(t.Type, env, t.Scripts, executor.Options{
+		SSH:    t.SshOptions,
+		Docker: t.DockerOptions,
+	})
+	if err != nil {
+		return err
 	}
+	return ex.StartAndWait()
 }
