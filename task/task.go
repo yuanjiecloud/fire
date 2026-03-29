@@ -8,6 +8,15 @@ import (
 	"github.com/yuanjiecloud/fire/log"
 )
 
+// ExecutorType aliases executor.Type for use in fire.yaml task definitions.
+type ExecutorType = executor.Type
+
+const (
+	ExecutorTypeBash = executor.TypeBash
+	ExecutorTypeSsh  = executor.TypeSsh
+	ExecutorTypeSh   = executor.TypeSh
+)
+
 type Task struct {
 	Name         string               `json:"name,omitempty" yaml:"name,omitempty"`
 	Environments Environment          `json:"environments,omitempty" yaml:"environments,omitempty"`
@@ -80,7 +89,7 @@ func (t *Task) getCurrentEnv(ctx *Context) (result Environment, found bool) {
 	return
 }
 
-func (t *Task) runScripts(ctx *Context) (err error) {
+func (t *Task) runScripts(ctx *Context) error {
 	if len(t.Scripts) == 0 {
 		return nil
 	}
@@ -88,11 +97,9 @@ func (t *Task) runScripts(ctx *Context) (err error) {
 	if !found {
 		return errors.Errorf("unset env")
 	}
-	if t.Type == executor.TypeBash {
-		return executor.NewBashExecutor(env, t.Scripts).StartAndWait()
-	} else if t.Type == executor.TypeSsh {
-		return executor.NewSshExecutor(env, t.Scripts, t.SshOptions).StartAndWait()
-	} else {
-		return errors.Errorf("unknown executor type: %v", t.Type)
+	ex, err := executor.New(t.Type, env, t.Scripts, t.SshOptions)
+	if err != nil {
+		return err
 	}
+	return ex.StartAndWait()
 }
