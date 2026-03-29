@@ -1,9 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/spf13/cobra"
 	"github.com/yuanjiecloud/fire/log"
 )
@@ -17,20 +14,15 @@ func (t *runCommand) Run(cmd *cobra.Command, args []string) {
 	if len(args) > 0 {
 		t.taskName = args[0]
 	}
+	var err error
 	if t.taskName != "" {
-		err := t.pipeline.RunTask(t.taskName, nil)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(-1)
-		}
+		err = t.pipeline.RunTask(t.taskName, nil)
 	} else {
-		err := t.pipeline.RunAll(nil)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(-1)
-		}
+		err = t.pipeline.RunAll(nil)
 	}
-
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func (t *runCommand) Prepare(cmd *cobra.Command) {

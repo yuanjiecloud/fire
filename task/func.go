@@ -27,16 +27,19 @@ func GetGlobalCacheDir() (fireCacheDir string, err error) {
 	}
 	fireCacheDir, err = os.UserHomeDir()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("get home dir failed: %w", err)
 	}
 	fireCacheDir = path.Join(fireCacheDir, ".config", "fire")
 	_, err = os.Stat(fireCacheDir)
-	if os.IsNotExist(err) {
-		err = os.MkdirAll(fireCacheDir, 0775)
-		if err != nil {
-			log.Fatal(err)
-			return "", errors.Errorf("get cache dir failed")
-		}
+	if err == nil {
+		globalCacheDir = fireCacheDir
+		return fireCacheDir, nil
+	}
+	if !os.IsNotExist(err) {
+		return "", fmt.Errorf("stat cache dir %q: %w", fireCacheDir, err)
+	}
+	if err = os.MkdirAll(fireCacheDir, 0775); err != nil {
+		return "", fmt.Errorf("create cache dir %q: %w", fireCacheDir, err)
 	}
 	globalCacheDir = fireCacheDir
 	return fireCacheDir, nil
@@ -46,22 +49,24 @@ func GetGlobalReposDir() (reposDir string, err error) {
 	if globalReposDir != "" {
 		return globalReposDir, nil
 	}
-	reposDir, err = GetGlobalCacheDir()
+	cacheDir, err := GetGlobalCacheDir()
 	if err != nil {
-		log.Error(err)
-		return "", errors.Errorf("get repos dir failed")
+		return "", fmt.Errorf("get repos dir failed: %w", err)
 	}
-	reposDir = path.Join(reposDir, "repos")
+	reposDir = path.Join(cacheDir, "repos")
 	_, err = os.Stat(reposDir)
-	if os.IsNotExist(err) {
-		err = os.MkdirAll(reposDir, 0775)
-		if err != nil {
-			log.Fatal(err)
-			return "", errors.Errorf("create repository dir failed")
-		}
+	if err == nil {
+		globalReposDir = reposDir
+		return reposDir, nil
+	}
+	if !os.IsNotExist(err) {
+		return "", fmt.Errorf("stat repos dir %q: %w", reposDir, err)
+	}
+	if err = os.MkdirAll(reposDir, 0775); err != nil {
+		return "", fmt.Errorf("create repos dir %q: %w", reposDir, err)
 	}
 	globalReposDir = reposDir
-	return
+	return reposDir, nil
 }
 
 func GetGlobalFireConfig() (configFile string, err error) {
@@ -77,26 +82,33 @@ func GetGlobalFireConfig() (configFile string, err error) {
 	return
 }
 
+// SplitPackageName parses a package spec of the form "namespace/name[@version]".
+// Both namespace and name are required; omitting the namespace would produce an
+// ambiguous GitHub clone URL ("https://github.com//name.git"), so single-segment
+// names without a slash are rejected.
 func SplitPackageName(packageName string) (namespace, name, version string, err error) {
 	if packageName == "" {
-		err = errors.Errorf("invalid package: %v", packageName)
+		err = errors.Errorf("invalid package: %q (expected namespace/name[@version])", packageName)
 		return
 	}
-	l := strings.Split(packageName, "@")
-	if len(l) == 0 {
-		err = errors.Errorf("invalid package: %v", packageName)
+	parts := strings.SplitN(packageName, "@", 2)
+	if len(parts) == 2 {
+		version = parts[1]
+		if version == "" {
+			err = errors.Errorf("invalid package: %q (version after '@' is empty)", packageName)
+			return
+		}
 	}
-	if len(l) == 2 {
-		version = l[1]
-	}
-	l = strings.Split(l[0], "/")
-	if len(l) == 1 {
-		name = l[0]
-	} else if len(l) == 2 {
-		namespace = l[0]
-		name = l[1]
-	} else {
-		err = errors.Errorf("invalid package: %v", packageName)
+	segments := strings.Split(parts[0], "/")
+	switch len(segments) {
+	case 2:
+		namespace = segments[0]
+		name = segments[1]
+		if namespace == "" || name == "" {
+			err = errors.Errorf("invalid package: %q (namespace and name must not be empty)", packageName)
+		}
+	default:
+		err = errors.Errorf("invalid package: %q (expected namespace/name[@version])", packageName)
 	}
 	return
 }

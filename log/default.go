@@ -18,11 +18,11 @@ func Debug(data ...interface{}) {
 }
 
 func Fatal(data ...interface{}) {
-	fmt.Println(data...)
+	fmt.Fprintln(os.Stderr, data...)
 	if PrintStack {
 		debug.PrintStack()
 	}
-	os.Exit(-1)
+	os.Exit(1)
 }
 
 func Error(data ...interface{}) {

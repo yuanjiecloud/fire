@@ -2,7 +2,7 @@ package task
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 	"github.com/yuanjiecloud/fire/log"
@@ -12,26 +12,29 @@ var mapFromPipelineToLocation = make(map[string]string)
 var pipelineMapper = make(map[string]*Pipeline)
 
 func AddPipeline(pipelineWithVersion string, dir string) (*Pipeline, error) {
-	workdirBackup := Getwd()
-	err := os.Chdir(dir)
+	// Resolve to absolute path before any Chdir so configFile is always correct.
+	absDir, err := filepath.Abs(dir)
 	if err != nil {
-		log.Fatal(err)
+		return nil, errors.Errorf("cannot resolve path %q: %v", dir, err)
 	}
-	log.Debug("enter dir: ", dir)
+	workdirBackup := Getwd()
+	if err = os.Chdir(absDir); err != nil {
+		return nil, errors.Errorf("cannot enter directory %q: %v", absDir, err)
+	}
+	log.Debug("enter dir: ", absDir)
 	defer func() {
-		err = os.Chdir(workdirBackup)
-		if err != nil {
+		if err = os.Chdir(workdirBackup); err != nil {
 			log.Fatal(err)
 		}
 		log.Debug("goback: ", workdirBackup)
 	}()
-	configFile := path.Join(dir, DefaultConfigFile)
+	configFile := filepath.Join(absDir, DefaultConfigFile)
 	pipeline, err := Parse(configFile)
 	if err != nil {
-		return nil, errors.Errorf("invalid fire project: %s", dir)
+		return nil, errors.Errorf("invalid fire project: %s", absDir)
 	}
-	log.Debug("add pipeline: ", pipelineWithVersion, " => ", dir)
-	mapFromPipelineToLocation[pipelineWithVersion] = dir
+	log.Debug("add pipeline: ", pipelineWithVersion, " => ", absDir)
+	mapFromPipelineToLocation[pipelineWithVersion] = absDir
 	pipelineMapper[pipelineWithVersion] = pipeline
 	return pipeline, nil
 }

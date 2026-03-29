@@ -73,7 +73,7 @@ func (t *sshExecutor) prepare(args ...string) error {
 		prefix = append(prefix, "-i", t.options.IdentifierFile)
 	}
 	if t.options.Port > 0 {
-		prefix = append(prefix, "-P", fmt.Sprintf("%v", t.options.Port))
+		prefix = append(prefix, "-p", fmt.Sprintf("%v", t.options.Port))
 	}
 	prefix = append(prefix, host, "sh")
 	t.cmd = exec.Command(t.Binary, append(prefix, args...)...)

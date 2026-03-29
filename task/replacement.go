@@ -15,8 +15,7 @@ type Replacement struct {
 
 func (t Replacement) IsLocal() bool {
 	log.Debug(fmt.Sprintf("pkg: %s, ver: %v, repos: %s", t.Package, t.Version, t.Repository))
-	if strings.Index(t.Repository, "http://") == 0 || strings.Index(t.Repository, "https://") == 0 || strings.Index(t.Repository, "git@") == 0 {
-		return false
-	}
-	return true
+	return !strings.HasPrefix(t.Repository, "http://") &&
+		!strings.HasPrefix(t.Repository, "https://") &&
+		!strings.HasPrefix(t.Repository, "git@")
 }

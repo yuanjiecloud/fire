@@ -47,7 +47,11 @@ func Parse(file string) (c *Pipeline, err error) {
 }
 
 func (t *Pipeline) ToJson() string {
-	data, _ := json.Marshal(t)
+	data, err := json.Marshal(t)
+	if err != nil {
+		log.Error("failed to marshal pipeline to JSON: ", err)
+		return "{}"
+	}
 	return string(data)
 }
 
