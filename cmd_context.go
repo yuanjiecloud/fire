@@ -26,7 +26,7 @@ func (t *contextCommand) InitFlag(cmd *cobra.Command) {
 	}
 	cmd.PersistentFlags().StringVarP(&t.workdir, "workdir", "w", workdir, "working directory")
 	cmd.PersistentFlags().BoolVarP(&t.verbose, "verbose", "v", false, "display debug log")
-	cmd.PersistentFlags().BoolVarP(&t.global, "global", "g", false, "use global config")
+	cmd.PersistentFlags().BoolVarP(&t.global, "global", "g", false, "operate on global repos cache (used by clean to wipe all cached dependencies)")
 	cmd.PersistentFlags().BoolVar(&t.printStack, "printstack", false, "print call stack")
 }
 

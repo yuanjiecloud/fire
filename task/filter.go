@@ -3,7 +3,6 @@ package task
 type Filter map[string]bool
 
 var globalResolverFilter = NewFilter()
-var globalProviderFilter = NewFilter()
 
 func NewFilter() Filter {
 	return make(Filter)

@@ -8,13 +8,6 @@ import (
 	"github.com/yuanjiecloud/fire/log"
 )
 
-type ExecutorType string
-
-const (
-	ExecutorTypeBash = ExecutorType("bash")
-	ExecutorTypeSsh  = ExecutorType("ssh")
-)
-
 type Task struct {
 	Name         string               `json:"name,omitempty" yaml:"name,omitempty"`
 	Environments Environment          `json:"environments,omitempty" yaml:"environments,omitempty"`

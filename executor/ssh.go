@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -27,15 +28,19 @@ type sshExecutor struct {
 	cmd *exec.Cmd
 }
 
+func sshShellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
+}
+
 func NewSshExecutor(env map[string]string, scripts []string, options *SshOptions) IExecutor {
 	in := bytes.NewBuffer(nil)
 	if len(env) > 0 {
 		for k, v := range env {
-			in.WriteString(fmt.Sprintf("export %v=%v\n", k, v))
+			in.WriteString(fmt.Sprintf("export %s=%s\n", k, sshShellQuote(v)))
 		}
 	}
 	if options != nil && options.RemotePath != "" {
-		in.WriteString(fmt.Sprintf("cd %s\n", options.RemotePath))
+		in.WriteString(fmt.Sprintf("cd %s\n", sshShellQuote(options.RemotePath)))
 	}
 	for _, line := range scripts {
 		if len(line) == 0 {
